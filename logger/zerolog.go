@@ -77,14 +77,14 @@ func (l *logger) Fatal(message string, args ...any) {
 	os.Exit(1)
 }
 
-func (l *logger) With(key string, value any) Logger {
-	newLogger := l.inner.With().Interface(key, value).Logger()
+func (l *logger) With(args ...any) Logger {
+	newLogger := applyPairs(l.inner.With(), args).Logger()
 
 	return &logger{inner: &newLogger}
 }
 
-func (l *logger) WithCtx(ctx context.Context, key string, value any) Logger {
-	builder := l.inner.With().Interface(key, value)
+func (l *logger) WithCtx(ctx context.Context, args ...any) Logger {
+	builder := applyPairs(l.inner.With(), args)
 
 	if span := trace.SpanFromContext(ctx); span != nil {
 		spanCtx := span.SpanContext()
@@ -107,8 +107,19 @@ func (l *logger) log(level zerolog.Level, message string, args ...any) {
 		return
 	}
 
-	event := l.inner.WithLevel(level)
+	applyPairs(l.inner.WithLevel(level), args).Msg(message)
+}
 
+// kvSetter is satisfied by both zerolog.Context and *zerolog.Event, letting
+// applyPairs build fields on whichever one a caller is assembling.
+type kvSetter[T any] interface {
+	Str(key, val string) T
+	Int(key string, i int) T
+	Err(err error) T
+	Interface(key string, i any) T
+}
+
+func applyPairs[T kvSetter[T]](b T, args []any) T {
 	pairsCount := len(args) / 2
 	for i := range pairsCount {
 		idx := i * 2
@@ -123,21 +134,21 @@ func (l *logger) log(level zerolog.Level, message string, args ...any) {
 
 		switch v := value.(type) {
 		case string:
-			event = event.Str(key, v)
+			b = b.Str(key, v)
 		case int:
-			event = event.Int(key, v)
+			b = b.Int(key, v)
 		case error:
-			event = event.Err(v)
+			b = b.Err(v)
 		default:
-			event = event.Interface(key, v)
+			b = b.Interface(key, v)
 		}
 	}
 
 	if len(args)%2 != 0 {
 		lastIdx := len(args) - 1
 		key := fmt.Sprintf("arg%d", lastIdx)
-		event = event.Interface(key, args[lastIdx])
+		b = b.Interface(key, args[lastIdx])
 	}
 
-	event.Msg(message)
+	return b
 }

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploggrpc"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -22,7 +22,7 @@ type otelLogger struct {
 func newOTELLog(cfg Cfg) (Logger, error) {
 	ctx := context.Background()
 
-	exporter, err := otlploggrpc.New(ctx)
+	exporter, err := autoexport.NewLogExporter(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create OTLP logger exporter: %w", err)
 	}
@@ -73,9 +73,9 @@ func (l *otelLogger) Fatal(message string, args ...any) {
 	os.Exit(1)
 }
 
-func (l *otelLogger) With(key string, value any) Logger {
+func (l *otelLogger) With(args ...any) Logger {
 	newAttrs := append([]otellog.KeyValue{}, l.attrs...)
-	newAttrs = append(newAttrs, toAttribute(key, value))
+	newAttrs = append(newAttrs, attrsFromArgs(args)...)
 
 	return &otelLogger{
 		ctx:   l.ctx,
@@ -84,9 +84,9 @@ func (l *otelLogger) With(key string, value any) Logger {
 	}
 }
 
-func (l *otelLogger) WithCtx(ctx context.Context, key string, value any) Logger {
+func (l *otelLogger) WithCtx(ctx context.Context, args ...any) Logger {
 	newAttrs := append([]otellog.KeyValue{}, l.attrs...)
-	newAttrs = append(newAttrs, toAttribute(key, value))
+	newAttrs = append(newAttrs, attrsFromArgs(args)...)
 
 	return &otelLogger{
 		ctx:   ctx,
@@ -112,15 +112,22 @@ func toAttribute(key string, value any) otellog.KeyValue {
 	}
 }
 
-func (l *otelLogger) emit(sev otellog.Severity, msg string, args ...any) {
-	attrList := append([]otellog.KeyValue{}, l.attrs...)
+func attrsFromArgs(args []any) []otellog.KeyValue {
+	attrs := make([]otellog.KeyValue, 0, len(args)/2)
 	for i := 0; i+1 < len(args); i += 2 {
 		key, ok := args[i].(string)
 		if !ok {
 			continue
 		}
-		attrList = append(attrList, toAttribute(key, args[i+1]))
+		attrs = append(attrs, toAttribute(key, args[i+1]))
 	}
+
+	return attrs
+}
+
+func (l *otelLogger) emit(sev otellog.Severity, msg string, args ...any) {
+	attrList := append([]otellog.KeyValue{}, l.attrs...)
+	attrList = append(attrList, attrsFromArgs(args)...)
 
 	var r otellog.Record
 

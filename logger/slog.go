@@ -56,14 +56,14 @@ func (l *slogLogger) Fatal(message string, args ...any) {
 	os.Exit(1)
 }
 
-func (l *slogLogger) With(key string, value any) Logger {
+func (l *slogLogger) With(args ...any) Logger {
 	return &slogLogger{
-		logger: l.logger.With(key, value),
+		logger: l.logger.With(args...),
 	}
 }
 
-func (l *slogLogger) WithCtx(ctx context.Context, key string, value any) Logger {
-	newLogger := l.logger.With(key, value)
+func (l *slogLogger) WithCtx(ctx context.Context, args ...any) Logger {
+	newLogger := l.logger.With(args...)
 
 	if requestID := ctx.Value("request_id"); requestID != nil {
 		newLogger = newLogger.With("request_id", requestID)

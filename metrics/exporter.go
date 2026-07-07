@@ -7,7 +7,7 @@ import (
 
 	prom "github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"go.opentelemetry.io/otel/exporters/otlp/otlpmetric/otlpmetricgrpc"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	"go.opentelemetry.io/otel/exporters/prometheus"
 	"go.opentelemetry.io/otel/sdk/metric"
 	"go.opentelemetry.io/otel/sdk/resource"
@@ -70,16 +70,14 @@ func newPrometheusMeterProvider(res *resource.Resource) (*metric.MeterProvider, 
 func newOTLPMeterProvider(res *resource.Resource) (*metric.MeterProvider, error) {
 	ctx := context.Background()
 
-	exporter, err := otlpmetricgrpc.New(ctx)
+	reader, err := autoexport.NewMetricReader(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create otlp exporter: %w", err)
+		return nil, fmt.Errorf("failed to create metric reader: %w", err)
 	}
 
 	provider := metric.NewMeterProvider(
 		metric.WithResource(res),
-		metric.WithReader(
-			metric.NewPeriodicReader(exporter),
-		),
+		metric.WithReader(reader),
 	)
 
 	return provider, nil

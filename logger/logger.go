@@ -11,8 +11,8 @@ type Logger interface {
 	Warn(message string, args ...any)
 	Error(message string, args ...any)
 	Fatal(message string, args ...any)
-	With(key string, value any) Logger
-	WithCtx(ctx context.Context, key string, value any) Logger
+	With(args ...any) Logger
+	WithCtx(ctx context.Context, args ...any) Logger
 }
 
 type Cfg interface {

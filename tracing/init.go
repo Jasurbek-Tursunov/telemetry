@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc"
+	"go.opentelemetry.io/contrib/exporters/autoexport"
 	sdk "go.opentelemetry.io/otel/sdk/trace"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -30,7 +30,7 @@ func New(cfg Cfg) (trace.Tracer, func(), error) {
 		return trace.NewNoopTracerProvider().Tracer(""), func() {}, nil
 	}
 
-	exporter, err := otlptracegrpc.New(context.Background())
+	exporter, err := autoexport.NewSpanExporter(context.Background())
 	if err != nil {
 		return nil, nil, err
 	}
