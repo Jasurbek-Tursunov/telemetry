@@ -27,7 +27,11 @@ type Cfg interface {
 
 func New(cfg Cfg) (trace.Tracer, func(), error) {
 	if !cfg.Bool("observability.trace.enable") {
-		return trace.NewNoopTracerProvider().Tracer(""), func() {}, nil
+		// Disabled exports nothing but still mints trace ids: WithCtx and
+		// TraceIDFromContext gate on the span context being valid, not sampled.
+		tp := sdk.NewTracerProvider(sdk.WithSampler(sdk.NeverSample()))
+
+		return tp.Tracer(cfg.String("app.name")), func() {}, nil
 	}
 
 	exporter, err := autoexport.NewSpanExporter(context.Background())
