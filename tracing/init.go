@@ -39,9 +39,16 @@ func New(cfg Cfg) (trace.Tracer, func(), error) {
 		return nil, nil, err
 	}
 
-	tp := sdk.NewTracerProvider(
-		sdk.WithBatcher(exporter),
-	)
+	opts := []sdk.TracerProviderOption{sdk.WithBatcher(exporter)}
+
+	if ignored := ignoredAttributes(cfg.Slice("observability.trace.sample_rules")); len(ignored) != 0 {
+		opts = append(opts, sdk.WithSampler(dropIgnored{
+			Sampler: sdk.ParentBased(sdk.AlwaysSample()),
+			ignored: ignored,
+		}))
+	}
+
+	tp := sdk.NewTracerProvider(opts...)
 
 	cleanup := func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)

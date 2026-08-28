@@ -11,6 +11,7 @@ import (
 type stubCfg struct {
 	enable bool
 	name   string
+	rules  []string
 }
 
 func (cfg stubCfg) Validate(map[string]string) (map[string][]string, error) { return nil, nil }
@@ -30,7 +31,13 @@ func (cfg stubCfg) String(key string) string {
 func (cfg stubCfg) Int(string) int                { return 0 }
 func (cfg stubCfg) Float(string) float64          { return 0 }
 func (cfg stubCfg) Duration(string) time.Duration { return 0 }
-func (cfg stubCfg) Slice(string) []string         { return nil }
+func (cfg stubCfg) Slice(key string) []string {
+	if key == "observability.trace.sample_rules" {
+		return cfg.rules
+	}
+
+	return nil
+}
 
 func newTracer(t *testing.T, cfg stubCfg) trace.Tracer {
 	t.Helper()
