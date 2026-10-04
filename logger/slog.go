@@ -4,6 +4,8 @@ import (
 	"context"
 	"log/slog"
 	"os"
+
+	"github.com/Jasurbek-Tursunov/telemetry/redact"
 )
 
 type slogLogger struct {
@@ -18,21 +20,33 @@ func newSlog(cfg Cfg) (Logger, error) {
 	switch env {
 	case "dev":
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
+			Level:       slog.LevelDebug,
+			ReplaceAttr: redactAttr,
 		})
 	case "prod":
 		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelInfo,
+			Level:       slog.LevelInfo,
+			ReplaceAttr: redactAttr,
 		})
 	default:
 		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
-			Level: slog.LevelDebug,
+			Level:       slog.LevelDebug,
+			ReplaceAttr: redactAttr,
 		})
 	}
 
 	return &slogLogger{
 		logger: slog.New(handler),
 	}, nil
+}
+
+func redactAttr(_ []string, attr slog.Attr) slog.Attr {
+	kind := attr.Value.Kind()
+	if kind == slog.KindAny || kind == slog.KindString {
+		attr.Value = slog.AnyValue(redact.Value(attr.Value.Any()))
+	}
+
+	return attr
 }
 
 func (l *slogLogger) Debug(message string, args ...any) {
