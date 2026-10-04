@@ -11,6 +11,8 @@ import (
 	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
+
+	"github.com/Jasurbek-Tursunov/telemetry/redact"
 )
 
 type otelLogger struct {
@@ -119,7 +121,7 @@ func attrsFromArgs(args []any) []otellog.KeyValue {
 		if !ok {
 			continue
 		}
-		attrs = append(attrs, toAttribute(key, args[i+1]))
+		attrs = append(attrs, toAttribute(key, redact.Value(args[i+1])))
 	}
 
 	return attrs

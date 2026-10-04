@@ -11,6 +11,8 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel/trace"
+
+	"github.com/Jasurbek-Tursunov/telemetry/redact"
 )
 
 type logger struct {
@@ -130,7 +132,7 @@ func applyPairs[T kvSetter[T]](b T, args []any) T {
 			key = fmt.Sprintf("arg%d", idx)
 		}
 
-		value := args[idx+1]
+		value := redact.Value(args[idx+1])
 
 		switch v := value.(type) {
 		case string:
@@ -147,7 +149,7 @@ func applyPairs[T kvSetter[T]](b T, args []any) T {
 	if len(args)%2 != 0 {
 		lastIdx := len(args) - 1
 		key := fmt.Sprintf("arg%d", lastIdx)
-		b = b.Interface(key, args[lastIdx])
+		b = b.Interface(key, redact.Value(args[lastIdx]))
 	}
 
 	return b
