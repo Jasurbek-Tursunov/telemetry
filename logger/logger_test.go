@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	otellog "go.opentelemetry.io/otel/log"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 const (
@@ -184,7 +184,7 @@ func TestOtelAttrsFromArgsMaskSecrets(t *testing.T) {
 		}
 	}
 
-	if attrs[2].Value.Kind() != otellog.KindInt64 {
-		t.Fatalf("count kind = %v, want int64", attrs[2].Value.Kind())
+	if attrs[2].Value.Type() != attribute.INT64 {
+		t.Fatalf("count kind = %v, want int64", attrs[2].Value.Type())
 	}
 }
