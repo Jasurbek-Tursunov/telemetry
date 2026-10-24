@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"go.opentelemetry.io/contrib/exporters/autoexport"
+	"go.opentelemetry.io/otel/attribute"
 	otellog "go.opentelemetry.io/otel/log"
 	"go.opentelemetry.io/otel/log/global"
 	"go.opentelemetry.io/otel/sdk/log"
@@ -18,7 +19,7 @@ import (
 type otelLogger struct {
 	ctx   context.Context
 	inner otellog.Logger
-	attrs []otellog.KeyValue
+	attrs []attribute.KeyValue
 }
 
 func newOTELLog(cfg Cfg) (Logger, error) {
@@ -76,7 +77,7 @@ func (l *otelLogger) Fatal(message string, args ...any) {
 }
 
 func (l *otelLogger) With(args ...any) Logger {
-	newAttrs := append([]otellog.KeyValue{}, l.attrs...)
+	newAttrs := append([]attribute.KeyValue{}, l.attrs...)
 	newAttrs = append(newAttrs, attrsFromArgs(args)...)
 
 	return &otelLogger{
@@ -87,7 +88,7 @@ func (l *otelLogger) With(args ...any) Logger {
 }
 
 func (l *otelLogger) WithCtx(ctx context.Context, args ...any) Logger {
-	newAttrs := append([]otellog.KeyValue{}, l.attrs...)
+	newAttrs := append([]attribute.KeyValue{}, l.attrs...)
 	newAttrs = append(newAttrs, attrsFromArgs(args)...)
 
 	return &otelLogger{
@@ -97,25 +98,25 @@ func (l *otelLogger) WithCtx(ctx context.Context, args ...any) Logger {
 	}
 }
 
-func toAttribute(key string, value any) otellog.KeyValue {
+func toAttribute(key string, value any) attribute.KeyValue {
 	switch v := value.(type) {
 	case string:
-		return otellog.String(key, v)
+		return attribute.String(key, v)
 	case int:
-		return otellog.Int(key, v)
+		return attribute.Int(key, v)
 	case int64:
-		return otellog.Int64(key, v)
+		return attribute.Int64(key, v)
 	case float64:
-		return otellog.Float64(key, v)
+		return attribute.Float64(key, v)
 	case bool:
-		return otellog.Bool(key, v)
+		return attribute.Bool(key, v)
 	default:
-		return otellog.String(key, fmt.Sprint(v))
+		return attribute.String(key, fmt.Sprint(v))
 	}
 }
 
-func attrsFromArgs(args []any) []otellog.KeyValue {
-	attrs := make([]otellog.KeyValue, 0, len(args)/2)
+func attrsFromArgs(args []any) []attribute.KeyValue {
+	attrs := make([]attribute.KeyValue, 0, len(args)/2)
 	for i := 0; i+1 < len(args); i += 2 {
 		key, ok := args[i].(string)
 		if !ok {
@@ -128,14 +129,14 @@ func attrsFromArgs(args []any) []otellog.KeyValue {
 }
 
 func (l *otelLogger) emit(sev otellog.Severity, msg string, args ...any) {
-	attrList := append([]otellog.KeyValue{}, l.attrs...)
+	attrList := append([]attribute.KeyValue{}, l.attrs...)
 	attrList = append(attrList, attrsFromArgs(args)...)
 
 	var r otellog.Record
 
 	r.SetTimestamp(time.Now())
 	r.SetSeverity(sev)
-	r.SetBody(otellog.StringValue(msg))
+	r.SetBody(attribute.StringValue(msg))
 	r.AddAttributes(attrList...)
 
 	l.inner.Emit(l.ctx, r)
